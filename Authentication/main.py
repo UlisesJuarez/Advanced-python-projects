@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, url_for, redirect, flash, send_from_directory
+from flask import Flask, render_template, request, url_for, redirect, flash, send_file
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import UserMixin, login_user, LoginManager, login_required, current_user, logout_user
@@ -57,7 +57,7 @@ def logout():
 
 @app.route('/download')
 def download():
-    pass
+    return send_file("static/files/cheat_sheet.pdf")
 
 
 if __name__ == "__main__":
