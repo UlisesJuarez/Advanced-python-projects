@@ -1,3 +1,4 @@
+import email
 from flask import Flask, render_template, request, url_for, redirect, flash, send_file
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_sqlalchemy import SQLAlchemy
@@ -9,6 +10,13 @@ app.config['SECRET_KEY'] = 'any-secret-key-you-choose'
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///users.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
+
+login_manager=LoginManager()
+login_manager.init_app(app)
+
+@login_manager.user_loader
+def load_user(user_id):
+    return User.query.get(int(user_id))
 
 
 class User(UserMixin, db.Model):
@@ -35,26 +43,42 @@ def register():
         )
         db.session.add(new_user)
         db.session.commit()
+
+        login_user(new_user)
+
         return redirect(url_for("secrets",name=new_user.name))
     return render_template("register.html")
 
 
-@app.route('/login')
+@app.route('/login',methods=["GET","POST"])
 def login():
+    if request.method=="POST":
+        email=request.form["email"]
+        password=request.form["password"]
+
+        user=User.query.filter_by(email=email).first()
+
+        if check_password_hash(user.password,password):
+            login_user(user)
+            return redirect(url_for("secrets",name=user.name))
+
     return render_template("login.html")
 
 
 @app.route('/secrets')
+@login_required
 def secrets():
     return render_template("secrets.html",name=request.args.get("name"))
 
 
 @app.route('/logout')
 def logout():
-    pass
+    logout_user()
+    return redirect(url_for("home"))
 
 
 @app.route('/download')
+@login_required
 def download():
     return send_file("static/files/cheat_sheet.pdf")
 
