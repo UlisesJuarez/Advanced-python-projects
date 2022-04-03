@@ -52,7 +52,7 @@ def register():
         login_user(new_user)
 
         return redirect(url_for("secrets",name=new_user.name))
-    return render_template("register.html")
+    return render_template("register.html",logged_in=current_user.is_authenticated)
 
 
 @app.route('/login',methods=["GET","POST"])
@@ -76,13 +76,13 @@ def login():
 
 
 
-    return render_template("login.html")
+    return render_template("login.html",logged_in=current_user.is_authenticated)
 
 
 @app.route('/secrets')
 @login_required
 def secrets():
-    return render_template("secrets.html",name=request.args.get("name"))
+    return render_template("secrets.html",name=request.args.get("name"),logged_in=True)
 
 
 @app.route('/logout')
