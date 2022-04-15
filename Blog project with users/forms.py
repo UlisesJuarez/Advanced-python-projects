@@ -1,3 +1,4 @@
+from ast import Sub
 from flask_wtf import FlaskForm
 from wtforms import StringField, SubmitField, PasswordField
 from wtforms.validators import DataRequired, URL
@@ -21,3 +22,7 @@ class LoginForm(FlaskForm):
     email=StringField("Email",validators=[DataRequired()])
     password=PasswordField("Password",validators=[DataRequired()])
     submit=SubmitField("Let Me In!")
+
+class CommentForm(FlaskForm):
+    comment_text=CKEditorField("Comment",validators=[DataRequired()])
+    submit=SubmitField("Submit Comment")
