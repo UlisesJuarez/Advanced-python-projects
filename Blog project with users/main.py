@@ -2,6 +2,7 @@ from flask import Flask, render_template, redirect, url_for, flash, abort
 from flask_bootstrap import Bootstrap
 from flask_ckeditor import CKEditor
 from datetime import date
+from requests import post
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.orm import relationship
@@ -35,24 +36,25 @@ def admin_only(f):
         return f(*args,**kwargs)
     return decorated_function
 
-##CONFIGURE TABLES
 
+class User(UserMixin, db.Model):
+    __tablename__ = "users"
+    id = db.Column(db.Integer, primary_key=True)
+    email = db.Column(db.String(100), unique=True)
+    password = db.Column(db.String(100))
+    name = db.Column(db.String(100))
+    posts = relationship("BlogPost", back_populates="author")
+    
 class BlogPost(db.Model):
     __tablename__ = "blog_posts"
     id = db.Column(db.Integer, primary_key=True)
-    author = db.Column(db.String(250), nullable=False)
+    author_id = db.Column(db.Integer, db.ForeignKey("users.id"))
+    author = relationship("User", back_populates="posts")
     title = db.Column(db.String(250), unique=True, nullable=False)
     subtitle = db.Column(db.String(250), nullable=False)
     date = db.Column(db.String(250), nullable=False)
     body = db.Column(db.Text, nullable=False)
     img_url = db.Column(db.String(250), nullable=False)
-
-class User(UserMixin,db.Model):
-    _tablename__= "users"
-    id=db.Column(db.Integer,primary_key=True)
-    email=db.Column(db.String(100),unique=True)
-    password=db.Column(db.String(100))
-    name=db.Column(db.String(100))
 
 # db.create_all()
 
@@ -130,18 +132,18 @@ def contact():
     return render_template("contact.html",current_user=current_user)
 
 
-@app.route("/new-post")
+@app.route("/new-post",methods=["GET","POST"])
 @admin_only
 def add_new_post():
     form = CreatePostForm()
     if form.validate_on_submit():
         new_post = BlogPost(
-            title=form.title.data,
-            subtitle=form.subtitle.data,
-            body=form.body.data,
-            img_url=form.img_url.data,
-            author=current_user,
-            date=date.today().strftime("%B %d, %Y")
+        title=form.title.data,
+        subtitle=form.subtitle.data,
+        body=form.body.data,
+        img_url=form.img_url.data,
+        author_id=current_user.id,
+        date=date.today().strftime("%B %d, %Y")
         )
         db.session.add(new_post)
         db.session.commit()
@@ -149,7 +151,7 @@ def add_new_post():
     return render_template("make-post.html", form=form,current_user=current_user)
 
 
-@app.route("/edit-post/<int:post_id>")
+@app.route("/edit-post/<int:post_id>",methods=["GET","POST"])
 @admin_only
 def edit_post(post_id):
     post = BlogPost.query.get(post_id)
@@ -157,19 +159,17 @@ def edit_post(post_id):
         title=post.title,
         subtitle=post.subtitle,
         img_url=post.img_url,
-        author=post.author,
         body=post.body
     )
     if edit_form.validate_on_submit():
         post.title = edit_form.title.data
         post.subtitle = edit_form.subtitle.data
         post.img_url = edit_form.img_url.data
-        post.author = edit_form.author.data
         post.body = edit_form.body.data
         db.session.commit()
         return redirect(url_for("show_post", post_id=post.id))
 
-    return render_template("make-post.html", form=edit_form,current_user=current_user)
+    return render_template("make-post.html", form=edit_form,current_user=current_user,is_edit=True)
 
 
 @app.route("/delete/<int:post_id>")
